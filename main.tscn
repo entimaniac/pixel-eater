@@ -1,43 +1,25 @@
 [gd_scene format=3 uid="uid://btgo0frp2saah"]
 
-[ext_resource type="PackedScene" uid="uid://cxbwgw41iethx" path="res://Ball.tscn" id="1_ig7tw"]
-[ext_resource type="Texture2D" uid="uid://cplihuqq4mad6" path="res://icon.svg" id="2_h2yge"]
-[ext_resource type="Script" uid="uid://bao4ldg7hyyw4" path="res://circly_script.gd" id="3_1bvp3"]
+[ext_resource type="Script" path="res://game.gd" id="1_uqj5r"]
 
-[sub_resource type="RectangleShape2D" id="RectangleShape2D_ig7tw"]
-size = Vector2(1353, 291)
+[node name="Game" type="Node2D"]
+script = ExtResource("1_uqj5r")
 
-[node name="Node2D" type="Node2D" unique_id=1933753985]
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
 
-[node name="Ball" parent="." unique_id=698995183 instance=ExtResource("1_ig7tw")]
-position = Vector2(153, 246)
+[node name="ScoreLabel" type="Label" parent="CanvasLayer"]
+offset_left = 16.0
+offset_top = 12.0
+offset_right = 244.0
+offset_bottom = 44.0
+theme_override_font_sizes/font_size = 24
+text = "Score: 0"
 
-[node name="StaticBody2D" type="StaticBody2D" parent="." unique_id=1654230614]
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="StaticBody2D" unique_id=928715354]
-position = Vector2(704.5, 654)
-shape = SubResource("RectangleShape2D_ig7tw")
-
-[node name="ColorRect" type="ColorRect" parent="StaticBody2D/CollisionShape2D" unique_id=807454121]
-offset_left = -670.5
-offset_top = -139.0
-offset_right = 678.5
-offset_bottom = 156.0
-color = Color(0.1764706, 1, 1, 1)
-
-[node name="circly_icon_thing" type="Sprite2D" parent="." unique_id=448148674]
-position = Vector2(798, 142)
-texture = ExtResource("2_h2yge")
-script = ExtResource("3_1bvp3")
-
-[node name="Button" type="Button" parent="." unique_id=1372108304]
-offset_left = 552.0
-offset_top = 270.0
-offset_right = 632.0
-offset_bottom = 305.0
-text = "tOGGLE MOtion
-
-
-"
-
-[connection signal="pressed" from="Button" to="circly_icon_thing" method="_on_button_pressed"]
+[node name="MessageLabel" type="Label" parent="CanvasLayer"]
+offset_left = 180.0
+offset_top = 12.0
+offset_right = 780.0
+offset_bottom = 68.0
+theme_override_font_sizes/font_size = 18
+horizontal_alignment = 1
+text = "Arrow keys move. Avoid enemy pixels and the bottom edge."
