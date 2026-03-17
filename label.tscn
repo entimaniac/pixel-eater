@@ -1,0 +1,24 @@
+[gd_scene format=3 uid="uid://biubc0aqs74l6"]
+
+[node name="Label" type="Label" unique_id=800742884]
+offset_left = 493.0
+offset_top = 311.0
+offset_right = 616.0
+offset_bottom = 334.0
+text = "Hello The World"
+
+[node name="Label" type="Label" parent="." unique_id=7198303]
+layout_mode = 0
+offset_left = 28.0
+offset_top = 38.0
+offset_right = 90.0
+offset_bottom = 61.0
+text = "another"
+
+[node name="Label2" type="Label" parent="." unique_id=372334765]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 73.0
+offset_right = 116.0
+offset_bottom = 96.0
+text = "another one"
