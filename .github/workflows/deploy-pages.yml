@@ -1,0 +1,98 @@
+name: Deploy Godot Web Build
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Install Godot
+        env:
+          GODOT_VERSION: 4.6.1-stable
+          GODOT_VERSION_DIR: 4.6.1.stable
+        run: |
+          set -eu
+          mkdir -p "$RUNNER_TEMP/godot"
+          curl -L --fail --output "$RUNNER_TEMP/godot.zip" \
+            "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
+          python3 - <<'PY'
+          import os, zipfile
+          zip_path = os.path.join(os.environ["RUNNER_TEMP"], "godot.zip")
+          out_dir = os.path.join(os.environ["RUNNER_TEMP"], "godot")
+          with zipfile.ZipFile(zip_path) as archive:
+              archive.extractall(out_dir)
+          PY
+          chmod +x "$RUNNER_TEMP/godot/Godot_v${GODOT_VERSION}_linux.x86_64"
+
+          mkdir -p "$HOME/.local/share/godot/export_templates/${GODOT_VERSION_DIR}"
+          curl -L --fail --output "$RUNNER_TEMP/templates.tpz" \
+            "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_export_templates.tpz"
+          python3 - <<'PY'
+          import os, pathlib, shutil, zipfile
+          zip_path = os.path.join(os.environ["RUNNER_TEMP"], "templates.tpz")
+          out_dir = pathlib.Path(
+              os.environ["HOME"],
+              ".local",
+              "share",
+              "godot",
+              "export_templates",
+              os.environ["GODOT_VERSION_DIR"],
+          )
+          with zipfile.ZipFile(zip_path) as archive:
+              archive.extractall(out_dir)
+
+          nested_dir = out_dir / "templates"
+          if nested_dir.is_dir():
+              for item in nested_dir.iterdir():
+                  shutil.move(str(item), out_dir / item.name)
+              nested_dir.rmdir()
+          PY
+
+      - name: Export Web build
+        env:
+          GODOT_VERSION: 4.6.1-stable
+        run: |
+          set -eu
+          mkdir -p build/web
+          "$RUNNER_TEMP/godot/Godot_v${GODOT_VERSION}_linux.x86_64" \
+            --headless \
+            --path . \
+            --export-release Web build/web/index.html
+          touch build/web/.nojekyll
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: build/web
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
