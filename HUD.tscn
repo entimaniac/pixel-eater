@@ -16,7 +16,7 @@ offset_top = 44.0
 offset_right = 236.0
 offset_bottom = 124.0
 theme_override_font_sizes/font_size = 14
-text = "Escaped: 0\nTime: 0\nAbsorb: 0\nSize: 1.0x"
+text = "Time: 0\nAbsorb: 0\nSize: 1.0x"
 
 [node name="MessageLabel" type="Label" parent="."]
 offset_left = 16.0

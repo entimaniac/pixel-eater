@@ -12,14 +12,18 @@ const GRID_SPACING := 24.0
 const GRID_COLUMN_WIDTH := 48.0
 
 const DIFFICULTY_RAMP_TIME := 90.0
-const START_SPAWN_MIN := 0.16
-const START_SPAWN_MAX := 0.30
-const END_SPAWN_MIN := 0.08
-const END_SPAWN_MAX := 0.18
-const START_ENEMY_MIN_SIDE := 6.0
-const START_ENEMY_MAX_SIDE := 20.0
-const END_ENEMY_MIN_SIDE := 8.0
-const END_ENEMY_MAX_SIDE := 34.0
+const START_SPAWN_MIN := 0.024
+const START_SPAWN_MAX := 0.050
+const END_SPAWN_MIN := 0.012
+const END_SPAWN_MAX := 0.028
+const START_ENEMY_MIN_WIDTH := 2.0
+const START_ENEMY_MAX_WIDTH := 4.8
+const END_ENEMY_MIN_WIDTH := 2.2
+const END_ENEMY_MAX_WIDTH := 6.5
+const START_ENEMY_HEIGHT_RATIO_MIN := 1.1
+const START_ENEMY_HEIGHT_RATIO_MAX := 2.8
+const END_ENEMY_HEIGHT_RATIO_MIN := 1.2
+const END_ENEMY_HEIGHT_RATIO_MAX := 3.4
 const START_GRAVITY_MIN := 0.22
 const START_GRAVITY_MAX := 0.55
 const END_GRAVITY_MIN := 0.34
@@ -28,11 +32,13 @@ const START_FALL_SPEED_MIN := 10.0
 const START_FALL_SPEED_MAX := 45.0
 const END_FALL_SPEED_MIN := 40.0
 const END_FALL_SPEED_MAX := 95.0
-const DENSITY_MIN := 1.35
-const DENSITY_MAX := 1.85
+const DENSITY_MIN := 0.30
+const DENSITY_MAX := 2.80
+const DENSE_ENEMY_CHANCE := 0.07
 
 @onready var enemy_container: Node2D = $World/EnemyContainer
 @onready var player_container: Node2D = $World/PlayerContainer
+@onready var top_wall: StaticBody2D = $World/Bounds/TopWall
 @onready var left_wall: StaticBody2D = $World/Bounds/LeftWall
 @onready var right_wall: StaticBody2D = $World/Bounds/RightWall
 @onready var floor_body: StaticBody2D = $World/Bounds/Floor
@@ -126,16 +132,24 @@ func _spawn_player() -> void:
 func _spawn_enemy() -> void:
 	var viewport_size := get_viewport_rect().size
 	var difficulty := _difficulty_ratio()
-	var min_side := lerpf(START_ENEMY_MIN_SIDE, END_ENEMY_MIN_SIDE, difficulty)
-	var max_side := lerpf(START_ENEMY_MAX_SIDE, END_ENEMY_MAX_SIDE, difficulty)
-	var size_bias := lerpf(2.8, 1.9, difficulty)
-	var side := lerpf(min_side, max_side, pow(rng.randf(), size_bias))
+	var min_width := lerpf(START_ENEMY_MIN_WIDTH, END_ENEMY_MIN_WIDTH, difficulty)
+	var max_width := lerpf(START_ENEMY_MAX_WIDTH, END_ENEMY_MAX_WIDTH, difficulty)
+	var width_bias := lerpf(4.2, 3.0, difficulty)
+	var enemy_width := lerpf(min_width, max_width, pow(rng.randf(), width_bias))
+	var height_ratio := rng.randf_range(
+		lerpf(START_ENEMY_HEIGHT_RATIO_MIN, END_ENEMY_HEIGHT_RATIO_MIN, difficulty),
+		lerpf(START_ENEMY_HEIGHT_RATIO_MAX, END_ENEMY_HEIGHT_RATIO_MAX, difficulty)
+	)
+	var enemy_height := enemy_width * height_ratio
 	var enemy := ENEMY_SCENE.instantiate() as EnemyBlock
 	var hue := rng.randf_range(0.0, 0.06)
-	var saturation := rng.randf_range(0.68, 0.90)
-	var density := rng.randf_range(DENSITY_MIN, DENSITY_MAX)
+	var density_roll := pow(rng.randf(), 4.8)
+	if rng.randf() < DENSE_ENEMY_CHANCE:
+		density_roll = lerpf(0.72, 1.0, pow(rng.randf(), 0.35))
+	var density := lerpf(DENSITY_MIN, DENSITY_MAX, density_roll)
 	var density_t := inverse_lerp(DENSITY_MIN, DENSITY_MAX, density)
-	var value := lerpf(0.96, 0.52, density_t) * rng.randf_range(0.92, 1.0)
+	var saturation := lerpf(0.02, 0.88, pow(density_t, 1.35)) * rng.randf_range(0.92, 1.0)
+	var value := lerpf(1.0, 0.42, pow(density_t, 0.9)) * rng.randf_range(0.96, 1.0)
 	var gravity_scale := lerpf(START_GRAVITY_MIN, END_GRAVITY_MIN, difficulty)
 	gravity_scale = rng.randf_range(gravity_scale, lerpf(START_GRAVITY_MAX, END_GRAVITY_MAX, difficulty))
 	var initial_fall_speed := rng.randf_range(
@@ -143,7 +157,7 @@ func _spawn_enemy() -> void:
 		lerpf(START_FALL_SPEED_MAX, END_FALL_SPEED_MAX, difficulty)
 	)
 	enemy.setup(
-		side,
+		Vector2(enemy_width, enemy_height),
 		Color.from_hsv(hue, saturation, value),
 		surface_material,
 		gravity_scale,
@@ -151,8 +165,8 @@ func _spawn_enemy() -> void:
 		density
 	)
 	enemy.position = Vector2(
-		rng.randf_range(side * 0.5, viewport_size.x - side * 0.5),
-		-side * 0.5 - rng.randf_range(24.0, 160.0)
+		rng.randf_range(enemy_width * 0.5, viewport_size.x - enemy_width * 0.5),
+		-enemy_height * 0.5 - rng.randf_range(4.0, 28.0)
 	)
 	enemy_container.add_child(enemy)
 
@@ -191,6 +205,14 @@ func _ensure_key_action(action_name: String, keycodes: Array[int]) -> void:
 func _configure_bounds() -> void:
 	var viewport_size := get_viewport_rect().size
 	var wall_height := viewport_size.y + FLOOR_DEPTH * 2.0
+	var top_shape := top_wall.get_node("CollisionShape2D").shape as RectangleShape2D
+	if top_shape == null:
+		top_shape = RectangleShape2D.new()
+		top_wall.get_node("CollisionShape2D").shape = top_shape
+	top_shape.size = Vector2(viewport_size.x + WALL_THICKNESS * 2.0, WALL_THICKNESS)
+	top_wall.global_position = Vector2(viewport_size.x * 0.5, -WALL_THICKNESS * 0.5)
+	top_wall.physics_material_override = surface_material
+
 	var wall_shape := left_wall.get_node("CollisionShape2D").shape as RectangleShape2D
 	if wall_shape == null:
 		wall_shape = RectangleShape2D.new()
@@ -242,12 +264,11 @@ func _clear_enemies() -> void:
 func _update_hud() -> void:
 	if not is_instance_valid(player):
 		score_label.text = "Score: 0"
-		breakdown_label.text = "Escaped: 0   Time: 0   Absorb: 0   Size: 1.0x"
+		breakdown_label.text = "Time: 0   Absorb: 0   Size: 1.0x"
 		return
 
 	score_label.text = "Score: %d" % player.get_total_score()
-	breakdown_label.text = "Escaped: %d   Time: %d   Absorb: %d   Size: %.2fx" % [
-		player.escape_score,
+	breakdown_label.text = "Time: %d   Absorb: %d   Size: %.2fx" % [
 		player.survival_score,
 		player.absorb_score,
 		player.get_size_multiplier(),
@@ -285,6 +306,4 @@ func _on_kill_line_body_entered(body: Node) -> void:
 		if enemy.has_been_scored or enemy.is_absorbed():
 			return
 		enemy.mark_escaped()
-		if is_instance_valid(player):
-			player.register_escape_point()
 		enemy.queue_free()

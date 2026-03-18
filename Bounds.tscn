@@ -4,8 +4,15 @@
 [sub_resource type="RectangleShape2D" id="2"]
 [sub_resource type="RectangleShape2D" id="3"]
 [sub_resource type="RectangleShape2D" id="4"]
+[sub_resource type="RectangleShape2D" id="5"]
 
 [node name="Bounds" type="Node2D"]
+
+[node name="TopWall" type="StaticBody2D" parent="."]
+collision_layer = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="TopWall"]
+shape = SubResource("5")
 
 [node name="LeftWall" type="StaticBody2D" parent="."]
 

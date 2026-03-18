@@ -2,11 +2,11 @@
 
 [ext_resource type="PackedScene" path="res://World.tscn" id="1_p0doe"]
 [ext_resource type="PackedScene" path="res://HUD.tscn" id="2_q2e5m"]
-[ext_resource type="Script" path="res://game.gd" id="3_j8fqt"]
+[ext_resource type="Script" uid="uid://ct574vylhvdg2" path="res://game.gd" id="3_j8fqt"]
 
-[node name="Game" type="Node2D"]
+[node name="Game" type="Node2D" unique_id=169082677]
 script = ExtResource("3_j8fqt")
 
-[node name="World" parent="." instance=ExtResource("1_p0doe")]
+[node name="World" parent="." unique_id=51683130 instance=ExtResource("1_p0doe")]
 
-[node name="HUD" parent="." instance=ExtResource("2_q2e5m")]
+[node name="HUD" parent="." unique_id=1543592454 instance=ExtResource("2_q2e5m")]

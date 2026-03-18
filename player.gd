@@ -20,7 +20,6 @@ var current_area := BASE_WIDTH * BASE_HEIGHT
 var current_width := BASE_WIDTH
 var current_height := BASE_HEIGHT
 var survival_score_accumulator := 0.0
-var escape_score := 0
 var survival_score := 0
 var absorb_score := 0
 var input_enabled := true
@@ -35,6 +34,7 @@ func _ready() -> void:
 	max_contacts_reported = 64
 	can_sleep = false
 	continuous_cd = CCD_MODE_CAST_SHAPE
+	collision_mask |= 2
 	gravity_scale = 0.0
 	linear_damp = 0.0
 	body_entered.connect(_on_body_entered)
@@ -79,12 +79,8 @@ func advance_survival(delta: float) -> void:
 		survival_score_accumulator -= 1.0
 
 
-func register_escape_point() -> void:
-	escape_score += 1
-
-
 func get_total_score() -> int:
-	return escape_score + survival_score + absorb_score
+	return survival_score + absorb_score
 
 
 func get_size_multiplier() -> float:
@@ -182,22 +178,23 @@ func _grow_from_absorb(absorbed_area: float) -> void:
 func _can_absorb_enemy_from_top(enemy: EnemyBlock) -> bool:
 	var player_half_width := current_width * 0.5
 	var player_half_height := current_height * 0.5
-	var enemy_half := enemy.current_side * 0.5
+	var enemy_half_width := enemy.current_size.x * 0.5
+	var enemy_half_height := enemy.current_size.y * 0.5
 	if enemy.global_position.y >= global_position.y:
 		return false
 
 	var player_left := global_position.x - player_half_width
 	var player_right := global_position.x + player_half_width
-	var enemy_left := enemy.global_position.x - enemy_half
-	var enemy_right := enemy.global_position.x + enemy_half
+	var enemy_left := enemy.global_position.x - enemy_half_width
+	var enemy_right := enemy.global_position.x + enemy_half_width
 	var overlap := minf(player_right, enemy_right) - maxf(player_left, enemy_left)
-	var required_overlap := minf(current_width, enemy.current_side) * ABSORB_HORIZONTAL_OVERLAP
+	var required_overlap := minf(current_width, enemy.current_size.x) * ABSORB_HORIZONTAL_OVERLAP
 	if overlap < required_overlap:
 		return false
 
 	var player_top := global_position.y - player_half_height
-	var enemy_bottom := enemy.global_position.y + enemy_half
-	var tolerance := maxf(4.0, minf(current_height, enemy.current_side) * ABSORB_TOP_TOLERANCE)
+	var enemy_bottom := enemy.global_position.y + enemy_half_height
+	var tolerance := maxf(4.0, minf(current_height, enemy.current_size.y) * ABSORB_TOP_TOLERANCE)
 	return enemy_bottom >= player_top - tolerance and enemy_bottom <= player_top + tolerance
 
 
