@@ -1,0 +1,28 @@
+[gd_scene format=3]
+
+[node name="HUD" type="CanvasLayer"]
+
+[node name="ScoreLabel" type="Label" parent="."]
+offset_left = 16.0
+offset_top = 12.0
+offset_right = 180.0
+offset_bottom = 44.0
+theme_override_font_sizes/font_size = 20
+text = "Score: 0"
+
+[node name="BreakdownLabel" type="Label" parent="."]
+offset_left = 16.0
+offset_top = 44.0
+offset_right = 236.0
+offset_bottom = 124.0
+theme_override_font_sizes/font_size = 14
+text = "Escaped: 0\nTime: 0\nAbsorb: 0\nSize: 1.0x"
+
+[node name="MessageLabel" type="Label" parent="."]
+offset_left = 16.0
+offset_top = 136.0
+offset_right = 404.0
+offset_bottom = 212.0
+theme_override_font_sizes/font_size = 16
+autowrap_mode = 3
+text = "Arrow keys move freely, Space dodges. Touch blocks to absorb. Stay off the bottom."

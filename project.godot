@@ -12,21 +12,21 @@ config_version=5
 
 config/name="pixel-eater"
 run/main_scene="uid://btgo0frp2saah"
-config/features=PackedStringArray("4.6", "Compatibility")
+config/features=PackedStringArray("4.6")
 config/icon="res://icon.svg"
 
 [display]
 
-window/size/viewport_width=960
-window/size/viewport_height=720
+window/size/viewport_width=420
+window/size/viewport_height=840
 window/stretch/mode="canvas_items"
-window/stretch/aspect="keep"
 
 [physics]
 
+common/physics_ticks_per_second=120
 3d/physics_engine="Jolt Physics"
 
 [rendering]
 
-renderer/rendering_method="gl_compatibility"
 rendering_device/driver.windows="d3d12"
+renderer/rendering_method="gl_compatibility"

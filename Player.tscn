@@ -1,15 +1,15 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://c80e2m4pylbsj"]
 
-[ext_resource type="Script" path="res://player.gd" id="1_hgq5d"]
+[ext_resource type="Script" uid="uid://cwlu0wxcdpt4d" path="res://player.gd" id="1_hgq5d"]
 
 [sub_resource type="RectangleShape2D" id="1"]
-size = Vector2(16, 16)
+size = Vector2(24, 12)
 
-[node name="Player" type="RigidBody2D"]
+[node name="Player" type="RigidBody2D" unique_id=65290909]
 lock_rotation = true
 contact_monitor = true
 max_contacts_reported = 64
 script = ExtResource("1_hgq5d")
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1043896462]
 shape = SubResource("1")

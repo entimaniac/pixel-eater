@@ -15,12 +15,14 @@ var is_absorbing := false
 var has_escaped := false
 var has_been_scored := false
 var block_color := Color8(255, 122, 92)
+var density := 1.0
 var _absorbed := false
 
 
 func _ready() -> void:
 	lock_rotation = true
 	can_sleep = false
+	continuous_cd = CCD_MODE_CAST_SHAPE
 	_update_shape()
 	_update_mass()
 	queue_redraw()
@@ -41,15 +43,17 @@ func setup(
 	color: Color,
 	material: PhysicsMaterial,
 	gravity_amount: float,
-	initial_fall_speed: float
+	initial_fall_speed: float,
+	block_density: float
 ) -> void:
 	base_side = side_length
 	current_side = side_length
 	base_area = side_length * side_length
 	current_area = base_area
 	block_color = color
+	density = block_density
 	physics_material_override = material
-	gravity_scale = gravity_amount
+	gravity_scale = gravity_amount * density
 	linear_velocity = Vector2(0.0, initial_fall_speed)
 	linear_damp = 0.15
 	if is_node_ready():
@@ -64,14 +68,15 @@ func process_absorption(delta: float, player_area: float, player_position: Vecto
 
 	is_absorbing = true
 	var ratio := maxf(base_area / maxf(player_area, 1.0), 0.05)
-	var duration_seconds := maxf(0.08, pow(ratio, 1.5))
+	var duration_seconds := maxf(0.40, pow(ratio, 1.5) * 5.0)
+	var previous_progress := absorb_progress
+	var previous_bottom := global_position.y + current_side * 0.5
+	var previous_x := global_position.x
 	absorb_progress = minf(absorb_progress + delta / duration_seconds, 1.0)
+	var absorbed_area_delta := base_area * (absorb_progress - previous_progress)
 	current_area = maxf(base_area * (1.0 - absorb_progress), MIN_AREA)
 	current_side = sqrt(current_area)
-	global_position = global_position.lerp(
-		player_position,
-		clampf(delta * (2.0 + absorb_progress * 6.0), 0.0, 0.9)
-	)
+	global_position = Vector2(previous_x, previous_bottom - current_side * 0.5)
 	linear_velocity *= maxf(0.0, 1.0 - delta * 5.0)
 	angular_velocity = 0.0
 	_update_shape()
@@ -83,12 +88,14 @@ func process_absorption(delta: float, player_area: float, player_position: Vecto
 		has_been_scored = true
 		var reward_ratio := maxf(base_area / maxf(player_area, 1.0), 0.05)
 		return {
+			"absorbed_area_delta": absorbed_area_delta,
 			"completed": true,
 			"points": max(2, int(ceil(2.0 * pow(reward_ratio, 1.2)))),
-			"absorbed_area": base_area,
 		}
 
-	return {}
+	return {
+		"absorbed_area_delta": absorbed_area_delta,
+	}
 
 
 func stop_absorbing() -> void:
@@ -116,4 +123,4 @@ func _update_shape() -> void:
 
 
 func _update_mass() -> void:
-	mass = maxf(current_area / BASE_PLAYER_AREA, 0.05)
+	mass = maxf((current_area / BASE_PLAYER_AREA) * density, 0.08)

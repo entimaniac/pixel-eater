@@ -1,7 +1,8 @@
 class_name PlayerBlock
 extends RigidBody2D
 
-const BASE_SIDE := 16.0
+const BASE_WIDTH := 96.0
+const BASE_HEIGHT := 12.0
 const CONTROL_FORCE := 1650.0
 const CONTROL_DRAG := 7.0
 const IDLE_DRAG := 18.0
@@ -9,12 +10,15 @@ const DODGE_IMPULSE := 290.0
 const DODGE_COOLDOWN := 0.32
 const MAX_SPEED := 430.0
 const MAX_DODGE_SPEED := 620.0
+const ABSORB_HORIZONTAL_OVERLAP := 0.35
+const ABSORB_TOP_TOLERANCE := 0.35
 
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
 
-var base_area := BASE_SIDE * BASE_SIDE
-var current_area := BASE_SIDE * BASE_SIDE
-var current_side := BASE_SIDE
+var base_area := BASE_WIDTH * BASE_HEIGHT
+var current_area := BASE_WIDTH * BASE_HEIGHT
+var current_width := BASE_WIDTH
+var current_height := BASE_HEIGHT
 var survival_score_accumulator := 0.0
 var escape_score := 0
 var survival_score := 0
@@ -30,6 +34,7 @@ func _ready() -> void:
 	contact_monitor = true
 	max_contacts_reported = 64
 	can_sleep = false
+	continuous_cd = CCD_MODE_CAST_SHAPE
 	gravity_scale = 0.0
 	linear_damp = 0.0
 	body_entered.connect(_on_body_entered)
@@ -59,7 +64,10 @@ func _draw() -> void:
 	if not touching_enemies.is_empty() and input_enabled:
 		tone = Color8(255, 231, 176)
 	draw_rect(
-		Rect2(Vector2(-current_side * 0.5, -current_side * 0.5), Vector2.ONE * current_side),
+		Rect2(
+			Vector2(-current_width * 0.5, -current_height * 0.5),
+			Vector2(current_width, current_height)
+		),
 		tone
 	)
 
@@ -139,11 +147,16 @@ func _handle_absorption(delta: float) -> void:
 		if enemy.is_absorbed() or enemy.has_escaped:
 			stale_ids.append(enemy_id)
 			continue
+		if not _can_absorb_enemy_from_top(enemy):
+			enemy.stop_absorbing()
+			continue
 
 		var result := enemy.process_absorption(delta, current_area, global_position)
+		var absorbed_area_delta := float(result.get("absorbed_area_delta", 0.0))
+		if absorbed_area_delta > 0.0:
+			_grow_from_absorb(absorbed_area_delta)
 		if result.get("completed", false):
 			absorb_score += int(result["points"])
-			_grow_from_absorb(float(result["absorbed_area"]))
 			enemy.queue_free()
 			stale_ids.append(enemy_id)
 
@@ -153,15 +166,39 @@ func _handle_absorption(delta: float) -> void:
 
 func _grow_from_absorb(absorbed_area: float) -> void:
 	var growth_efficiency := clampf(
-		0.6 / sqrt(current_area / base_area),
-		0.2,
-		0.6
+		0.12 / sqrt(current_area / base_area),
+		0.04,
+		0.12
 	)
 	current_area += absorbed_area * growth_efficiency
-	current_side = sqrt(current_area)
+	var area_scale := sqrt(current_area / base_area)
+	current_width = BASE_WIDTH * area_scale
+	current_height = BASE_HEIGHT * area_scale
 	_update_shape()
 	_update_mass()
 	queue_redraw()
+
+
+func _can_absorb_enemy_from_top(enemy: EnemyBlock) -> bool:
+	var player_half_width := current_width * 0.5
+	var player_half_height := current_height * 0.5
+	var enemy_half := enemy.current_side * 0.5
+	if enemy.global_position.y >= global_position.y:
+		return false
+
+	var player_left := global_position.x - player_half_width
+	var player_right := global_position.x + player_half_width
+	var enemy_left := enemy.global_position.x - enemy_half
+	var enemy_right := enemy.global_position.x + enemy_half
+	var overlap := minf(player_right, enemy_right) - maxf(player_left, enemy_left)
+	var required_overlap := minf(current_width, enemy.current_side) * ABSORB_HORIZONTAL_OVERLAP
+	if overlap < required_overlap:
+		return false
+
+	var player_top := global_position.y - player_half_height
+	var enemy_bottom := enemy.global_position.y + enemy_half
+	var tolerance := maxf(4.0, minf(current_height, enemy.current_side) * ABSORB_TOP_TOLERANCE)
+	return enemy_bottom >= player_top - tolerance and enemy_bottom <= player_top + tolerance
 
 
 func _update_shape() -> void:
@@ -169,7 +206,7 @@ func _update_shape() -> void:
 	if shape == null:
 		shape = RectangleShape2D.new()
 		collision_shape.shape = shape
-	shape.size = Vector2.ONE * current_side
+	shape.size = Vector2(current_width, current_height)
 
 
 func _update_mass() -> void:

@@ -12,14 +12,14 @@ const GRID_SPACING := 24.0
 const GRID_COLUMN_WIDTH := 48.0
 
 const DIFFICULTY_RAMP_TIME := 90.0
-const START_SPAWN_MIN := 0.70
-const START_SPAWN_MAX := 1.15
-const END_SPAWN_MIN := 0.22
-const END_SPAWN_MAX := 0.46
-const START_ENEMY_MIN_SIDE := 10.0
-const START_ENEMY_MAX_SIDE := 54.0
-const END_ENEMY_MIN_SIDE := 16.0
-const END_ENEMY_MAX_SIDE := 88.0
+const START_SPAWN_MIN := 0.16
+const START_SPAWN_MAX := 0.30
+const END_SPAWN_MIN := 0.08
+const END_SPAWN_MAX := 0.18
+const START_ENEMY_MIN_SIDE := 6.0
+const START_ENEMY_MAX_SIDE := 20.0
+const END_ENEMY_MIN_SIDE := 8.0
+const END_ENEMY_MAX_SIDE := 34.0
 const START_GRAVITY_MIN := 0.22
 const START_GRAVITY_MAX := 0.55
 const END_GRAVITY_MIN := 0.34
@@ -28,6 +28,8 @@ const START_FALL_SPEED_MIN := 10.0
 const START_FALL_SPEED_MAX := 45.0
 const END_FALL_SPEED_MIN := 40.0
 const END_FALL_SPEED_MAX := 95.0
+const DENSITY_MIN := 1.35
+const DENSITY_MAX := 1.85
 
 @onready var enemy_container: Node2D = $World/EnemyContainer
 @onready var player_container: Node2D = $World/PlayerContainer
@@ -35,9 +37,9 @@ const END_FALL_SPEED_MAX := 95.0
 @onready var right_wall: StaticBody2D = $World/Bounds/RightWall
 @onready var floor_body: StaticBody2D = $World/Bounds/Floor
 @onready var kill_line: Area2D = $World/Bounds/KillLine
-@onready var score_label: Label = $CanvasLayer/ScoreLabel
-@onready var breakdown_label: Label = $CanvasLayer/BreakdownLabel
-@onready var message_label: Label = $CanvasLayer/MessageLabel
+@onready var score_label: Label = $HUD/ScoreLabel
+@onready var breakdown_label: Label = $HUD/BreakdownLabel
+@onready var message_label: Label = $HUD/MessageLabel
 
 var rng := RandomNumberGenerator.new()
 var surface_material := PhysicsMaterial.new()
@@ -126,19 +128,28 @@ func _spawn_enemy() -> void:
 	var difficulty := _difficulty_ratio()
 	var min_side := lerpf(START_ENEMY_MIN_SIDE, END_ENEMY_MIN_SIDE, difficulty)
 	var max_side := lerpf(START_ENEMY_MAX_SIDE, END_ENEMY_MAX_SIDE, difficulty)
-	var size_bias := lerpf(1.55, 0.80, difficulty)
+	var size_bias := lerpf(2.8, 1.9, difficulty)
 	var side := lerpf(min_side, max_side, pow(rng.randf(), size_bias))
 	var enemy := ENEMY_SCENE.instantiate() as EnemyBlock
 	var hue := rng.randf_range(0.0, 0.06)
 	var saturation := rng.randf_range(0.68, 0.90)
-	var value := rng.randf_range(0.84, 1.0)
+	var density := rng.randf_range(DENSITY_MIN, DENSITY_MAX)
+	var density_t := inverse_lerp(DENSITY_MIN, DENSITY_MAX, density)
+	var value := lerpf(0.96, 0.52, density_t) * rng.randf_range(0.92, 1.0)
 	var gravity_scale := lerpf(START_GRAVITY_MIN, END_GRAVITY_MIN, difficulty)
 	gravity_scale = rng.randf_range(gravity_scale, lerpf(START_GRAVITY_MAX, END_GRAVITY_MAX, difficulty))
 	var initial_fall_speed := rng.randf_range(
 		lerpf(START_FALL_SPEED_MIN, END_FALL_SPEED_MIN, difficulty),
 		lerpf(START_FALL_SPEED_MAX, END_FALL_SPEED_MAX, difficulty)
 	)
-	enemy.setup(side, Color.from_hsv(hue, saturation, value), surface_material, gravity_scale, initial_fall_speed)
+	enemy.setup(
+		side,
+		Color.from_hsv(hue, saturation, value),
+		surface_material,
+		gravity_scale,
+		initial_fall_speed,
+		density
+	)
 	enemy.position = Vector2(
 		rng.randf_range(side * 0.5, viewport_size.x - side * 0.5),
 		-side * 0.5 - rng.randf_range(24.0, 160.0)

@@ -1,0 +1,11 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://Bounds.tscn" id="1_ffh5g"]
+
+[node name="World" type="Node2D"]
+
+[node name="Bounds" parent="." instance=ExtResource("1_ffh5g")]
+
+[node name="EnemyContainer" type="Node2D" parent="."]
+
+[node name="PlayerContainer" type="Node2D" parent="."]
